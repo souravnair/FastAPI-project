@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Path, HTTPException, Query
 import json
-from typing import Any, Optional
+from typing import Any
 
 app = FastAPI()
 
@@ -12,7 +12,7 @@ def load_patients_data() -> dict[str, dict[str, Any]]:
 
     return patients_data
 
-@app.get("/main")
+@app.get("/")
 def main():
     return {"message": "Welcome to patients server"}
 
@@ -29,7 +29,7 @@ def get_patient_data(pid:str=Path(title="patient id",description="Returns the pa
     raise HTTPException(status_code=404, detail=f"no patient with {pid} exists")
 
 @app.get("/patients")
-def view_patient(sort_column:str=Query(...,title="sort column", description="Sort the column", examples=["weight"]), order_by:str=Query(None,title="Order_by", description="Order by 'asc' | 'desc'", examples=["asc"])):
+def view_patients(sort_column:str=Query(...,title="sort column", description="Sort the column", examples=["weight"]), order_by:str=Query(None,title="Order_by", description="Order by 'asc' | 'desc'", examples=["asc"])):
     columnsTBS:list[str]=["height","weight","bmi"] #columnsTBS=columns to be sorted, only accept these columns in the parameter else return 400 Bad Request status code    
     if sort_column not in columnsTBS:
         raise HTTPException(status_code=400, detail=f"Use a valid column name. valid columns={columnsTBS}")
