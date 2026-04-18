@@ -1,16 +1,48 @@
-from fastapi import FastAPI, Path, HTTPException, Query
+from fastapi import FastAPI, Path, HTTPException, Query,Response
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, computed_field
+from typing import Annotated,Literal
 import json
 from typing import Any
 
 app = FastAPI()
+
+class Patient(BaseModel):
+    id: Annotated[str, Field(description="Patient ID")]
+    name:Annotated[str, Field(description="Name of the patient")]
+    city: Annotated[str, Field(description="City name")]
+    age: Annotated[int, Field(description="Age of the patient", gt=0)]
+    gender: Annotated[Literal["Male","Female","Others"], Field(description="Gender of the patient")]
+    height: Annotated[float, Field(description="Height of the patient in mtrs")]
+    weight: Annotated[float, Field(description="Weight of the patient in kgs")]
+    # compute the BMI using a computed field
+    @computed_field
+    @property
+    def bmi(self) -> float:
+        return round(self.weight / (self.height ** 2), 2)
+    @computed_field
+    def verdict(self) -> str:
+        if self.bmi<18.0:
+            return "Underweight"
+        elif self.bmi>18 and self.bmi<30:
+            return "Normal"
+        else:
+            return "Obese"
+        
 
 def load_patients_data() -> dict[str, dict[str, Any]]:
     with open("patients.json", "r", encoding="utf-8") as p:
         patients_data: dict[str, dict[str, Any]] = json.load(p) #if file is open use json.load(file) ==> json.load(p) instead of loading the file separately and loading the string using json.loads()
         # print(patients_data)
         p.close()
-
     return patients_data
+
+def write_patients_data(data:dict["str", dict["str","str"]])->bool:
+    with open("patients.json", "w", encoding="utf-8")  as p:
+        json.dump(data,p)
+        p.close()
+    return True
+
 
 @app.get("/")
 def main():
@@ -39,6 +71,16 @@ def view_patients(sort_column:str=Query(...,title="sort column", description="So
     
     return sorted_values
 
+@app.post("/create_patient")
+def create_patient(patient:Patient):
+    data=load_patients_data()
+    write_data:bool=False
+    if patient.id not in data:
+        data[patient.id]=patient.model_dump(exclude={"id"})
+        write_data:bool=write_patients_data(data)
+        if write_data:
+            return JSONResponse(content=f"Patient record with {patient.id} created successfully", status_code=201)
+    raise HTTPException(status_code=409,detail=f"Patient with {patient.id} already exists")
 
 if __name__ == "__main__":
     load_patients_data()
