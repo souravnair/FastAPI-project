@@ -1,14 +1,15 @@
-from fastapi import FastAPI, Path, HTTPException, Query,Response
+from fastapi import FastAPI, Path, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, computed_field
-from typing import Annotated,Literal
+from typing import Annotated,Literal,Optional
 import json
 from typing import Any
+import uvicorn
 
 app = FastAPI()
 
 class Patient(BaseModel):
-    id: Annotated[str, Field(description="Patient ID")]
+    id: Annotated[str, Field(description="Patient ID", min_length=1,max_length=30,examples=["P001"])]
     name:Annotated[str, Field(description="Name of the patient")]
     city: Annotated[str, Field(description="City name")]
     age: Annotated[int, Field(description="Age of the patient", gt=0)]
@@ -28,7 +29,14 @@ class Patient(BaseModel):
             return "Normal"
         else:
             return "Obese"
-        
+
+class UpdatePatient(BaseModel): #not taking id here cause it is provided by the user as path param
+    name:Annotated[Optional[str], Field(None,description="Name of the patient")]
+    city: Annotated[Optional[str], Field(None,description="City name")]
+    age: Annotated[Optional[int], Field(None,description="Age of the patient", gt=0)]
+    gender: Annotated[Optional[Literal["Male","Female","Others"]], Field(None,description="Gender of the patient")]
+    height: Annotated[Optional[float], Field(None,description="Height of the patient in mtrs")]
+    weight: Annotated[Optional[float], Field(None,description="Weight of the patient in kgs")]
 
 def load_patients_data() -> dict[str, dict[str, Any]]:
     with open("patients.json", "r", encoding="utf-8") as p:
@@ -82,6 +90,35 @@ def create_patient(patient:Patient):
             return JSONResponse(content=f"Patient record with {patient.id} created successfully", status_code=201)
     raise HTTPException(status_code=409,detail=f"Patient with {patient.id} already exists")
 
+
+@app.put("/update_patient/{pid}")
+def update_patient_info(updPInfo:UpdatePatient,pid:str=Path(title="PatientId", examples=["P001"], min_length=4)):
+    data=load_patients_data()
+    if pid not in data:
+        raise HTTPException(status_code=404, detail=f"Patient with pid={pid} doesn't exist")
+    
+    updateInfo=updPInfo.model_dump(exclude_unset=True)
+    get_patient_data=data.get(pid,None)    
+    
+    if get_patient_data:
+        for key in updateInfo:
+            get_patient_data[key]=updateInfo[key]
+        get_patient_data["id"]=pid
+
+    #load the patients data using the Patient model(this is used to calculate the bmi and verdict dynamically)    
+    patientModel=Patient.model_validate(get_patient_data)
+    data[pid]=patientModel.model_dump(exclude={"id"})
+
+    #write the uopdated patients details to the json file
+    write_patients_data(data)
+
+    return JSONResponse(data[pid],status_code=200)
+
+
+
+
+
+
 if __name__ == "__main__":
-    load_patients_data()
+    uvicorn.run(app="main:app", host="localhost", port=8000, reload=True)
     
