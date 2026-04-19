@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Path, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse,Response
 from pydantic import BaseModel, Field, computed_field
 from typing import Annotated,Literal,Optional
 import json
@@ -114,6 +114,14 @@ def update_patient_info(updPInfo:UpdatePatient,pid:str=Path(title="PatientId", e
 
     return JSONResponse(data[pid],status_code=200)
 
+@app.delete("/delete_patient/{pid}")
+def delete_patient_info(pid:str=Path(description="Patient ID")):
+    data=load_patients_data()
+    if pid not in data:
+        raise HTTPException(status_code=404, detail=f"Patient with pid={pid} doesn't exist")
+    del data[pid]
+    write_patients_data(data)
+    return Response(status_code=204)
 
 
 
