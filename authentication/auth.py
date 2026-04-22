@@ -16,7 +16,6 @@ router=APIRouter(prefix="/auth", tags=["Authentication"])
 
 #configuration and mock users DB
 SECRET_KEY:str=os.environ.get("SECRET_KEY", "")
-print("secret==",SECRET_KEY)
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
@@ -115,7 +114,7 @@ def user_login(form_data:Annotated[OAuth2PasswordRequestForm, Depends()]):
     access_token=create_access_token(data={"sub":userModel.username})
     return {"access_token":access_token, "token_type":"bearer"}
 
-#authorization check +> uses dependency injection
+#authorization check -> uses dependency injection
 @router.get("/me")
 def check_validity(data:Annotated[str, Depends(get_current_user)]):
     return "Valid details"
