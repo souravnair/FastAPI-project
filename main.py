@@ -10,9 +10,8 @@ from authentication.auth import router as authRouter, get_current_user
 app = FastAPI()
 app.include_router(authRouter)
 
-#create a userValidRouter which checks if the user is valid or not and configure thr oute based on this router instead of @app, any public route can be done using @app if you want but for the routes that needs user authentication approved needs to use the custom router
-userValidRouter=APIRouter(dependencies=[Depends(get_current_user)])
-app.include_router(authRouter)
+#create a validUserRouter which checks if the user is valid or not and configure thr oute based on this router instead of @app, any public route can be done using @app if you want but for the routes that needs user authentication approved needs to use the custom router
+validUserRouter=APIRouter(dependencies=[Depends(get_current_user)])
 
 class Patient(BaseModel):
     id: Annotated[str, Field(description="Patient ID", min_length=1,max_length=30,examples=["P001"])]
@@ -58,7 +57,7 @@ def write_patients_data(data:dict["str", dict["str","str"]])->bool:
     return True
 
 
-@userValidRouter.get("/test")
+@validUserRouter.get("/test")
 def main():
     return {"message": "Welcome to patients server"}
 
@@ -69,14 +68,14 @@ def main():
 
 
 
-@userValidRouter.get("/patients/{pid}")
+@validUserRouter.get("/patients/{pid}")
 def get_patient_data(pid:str=Path(title="patient id",description="Returns the patient details for the given PID",examples=["P001"],max_length=4)):
     data=load_patients_data()
     if pid in data:
         return {"result": data[pid]}    
     raise HTTPException(status_code=404, detail=f"no patient with {pid} exists")
 
-@userValidRouter.get("/patients")
+@validUserRouter.get("/patients")
 def view_patients(sort_column:str=Query(...,title="sort column", description="Sort the column", examples=["weight"]), order_by:str=Query(None,title="Order_by", description="Order by 'asc' | 'desc'", examples=["asc"])):
     columnsTBS:list[str]=["height","weight","bmi"] #columnsTBS=columns to be sorted, only accept these columns in the parameter else return 400 Bad Request status code    
     if sort_column not in columnsTBS:
@@ -87,7 +86,7 @@ def view_patients(sort_column:str=Query(...,title="sort column", description="So
     
     return sorted_values
 
-@userValidRouter.post("/create_patient")
+@validUserRouter.post("/create_patient")
 def create_patient(patient:Patient):
     data=load_patients_data()
     write_data:bool=False
@@ -99,7 +98,7 @@ def create_patient(patient:Patient):
     raise HTTPException(status_code=409,detail=f"Patient with {patient.id} already exists")
 
 
-@userValidRouter.put("/update_patient/{pid}")
+@validUserRouter.put("/update_patient/{pid}")
 def update_patient_info(updPInfo:UpdatePatient,pid:str=Path(title="PatientId", examples=["P001"], min_length=4)):
     data=load_patients_data()
     if pid not in data:
@@ -122,7 +121,7 @@ def update_patient_info(updPInfo:UpdatePatient,pid:str=Path(title="PatientId", e
 
     return JSONResponse(data[pid],status_code=200)
 
-@userValidRouter.delete("/delete_patient/{pid}")
+@validUserRouter.delete("/delete_patient/{pid}")
 def delete_patient_info(pid:str=Path(description="Patient ID")):
     data=load_patients_data()
     if pid not in data:
@@ -131,7 +130,7 @@ def delete_patient_info(pid:str=Path(description="Patient ID")):
     write_patients_data(data)
     return Response(status_code=204)
 
-app.include_router(userValidRouter)
+app.include_router(validUserRouter)
 
 
 

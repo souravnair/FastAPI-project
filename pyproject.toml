@@ -12,5 +12,6 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.26",
+    "redis>=7.4.0",
     "uvicorn>=0.44.0",
 ]

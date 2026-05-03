@@ -16,8 +16,8 @@ router=APIRouter(prefix="/auth", tags=["Authentication"])
 
 #configuration and mock users DB
 SECRET_KEY:str=os.environ.get("SECRET_KEY", "")
-ALGORITHM="HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+ALGORITHM=os.environ.get("ALGORITHM","")
+ACCESS_TOKEN_EXPIRE_MINUTES=float(os.environ.get("TOKEN_EXPIRY_MIN",""))
 
 fake_users_db: dict[Any, Any]={}
 pwd_context=CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -64,14 +64,14 @@ def create_access_token(data:Any):
     jwt_data.update({"exp":expiresAt})
     return jwt.encode(claims=jwt_data,key=SECRET_KEY,algorithm=ALGORITHM)
 
-#create a dependency to check if the user really exists in our dataase and only if it is True then all the endpoints in main.py are accessible by the user
+#create a dependency to check if the user really exists in our database and only if it is True then all the endpoints in main.py are accessible by the user
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     #create a custom exception to handle credentials exception
     credential_exception=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
     try:
         payload=jwt.decode(token=token, key=SECRET_KEY, algorithms=[ALGORITHM])
         username:str|None=payload.get("sub", None)
-        if username is None:
+        if username is None: 
             raise credential_exception
     except JWTError:
         raise credential_exception
@@ -88,7 +88,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 @router.post("/register")
 def register_user(username:str, email:str, password:str):
     if username in fake_users_db:
-        raise HTTPException(status_code=400, detail="USer already exists")
+        raise HTTPException(status_code=400, detail="User already exists")
     
     fake_users_db[username]={
      "username":username,
