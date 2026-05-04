@@ -55,7 +55,6 @@ def verify_password(plain_password:str,hashed_password:str):
 
 def get_password_hash(plain_password:str):
     truncated = truncate_password_to_72_bytes(plain_password)
-    print("truncated==", truncated)
     return pwd_context.hash(truncated)
 
 def create_access_token(data:Any):
